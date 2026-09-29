@@ -17,7 +17,19 @@
 
 ## 설치
 
-**스킬로 쓰기 (Claude Code)**
+**Claude Code 플러그인으로 설치 (권장)**
+
+Claude Code 대화창에서 두 줄을 차례로 입력한다.
+
+```
+/plugin marketplace add kimjusnu/looks_like_korean
+/plugin install looks-like-korean@looks-like-korean
+```
+
+터미널에서는 `claude plugin marketplace add kimjusnu/looks_like_korean` 다음에
+`claude plugin install looks-like-korean@looks-like-korean`. 파이썬 3.10 이상이 필요하다.
+
+**스킬 폴더를 직접 연결해서 쓰기**
 
 ```bash
 git clone https://github.com/kimjusnu/looks_like_korean.git

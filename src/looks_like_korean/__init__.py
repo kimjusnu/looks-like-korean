@@ -1,4 +1,4 @@
-"""looks-like-korean — 결정론적 한국어 리듬 계측 엔진.
+"""looks-like-korean — 장르별 한국어 문체 검사 엔진.
 
 LLM 호출 없음 · 네트워크 없음 · 외부 의존성 없음(표준 라이브러리만).
 같은 입력 → 항상 같은 출력.
@@ -19,7 +19,7 @@ from .genre import GENRES, LEVELS, RegisterReport, check_register
 from .metrics import METRIC_KEYS, Analysis, Metric, analyze
 from .report import render_compare, render_score, to_json
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "REGISTERS",
