@@ -17,6 +17,7 @@ from pathlib import Path
 from .findings import findings_to_dict, has_warnings, render_findings
 from .genre import GENRES, LEVELS, check_register
 from .metrics import METRIC_KEYS, analyze
+from .patterns import check_patterns
 from .report import analysis_to_dict, render_compare, render_score, to_json
 
 __all__ = ["main"]
@@ -88,7 +89,10 @@ def _build_parser() -> argparse.ArgumentParser:
 def _run_check(args: argparse.Namespace) -> int:
     text = _read_text(args.file)
     report = check_register(text, args.genre, args.level)
-    findings = list(report.findings)
+    findings = sorted(
+        [*report.findings, *check_patterns(text, args.genre)],
+        key=lambda f: (-1 if f.sentence_index is None else f.sentence_index, f.rule),
+    )
     name = Path(args.file).name
     if args.json:
         print(to_json(findings_to_dict(findings, {
