@@ -149,6 +149,12 @@ class TestNotice(unittest.TestCase):
         self.assertEqual(report.findings[0].severity, "warn")
 
 
+class TestSignature(unittest.TestCase):
+    def test_signature_line_is_not_nominal_prose(self):
+        text = "\n\n".join(["결제가 약 2시간 동안 되지 않았습니다. 지금은 정상입니다.", "[서비스명] 운영팀 드림"])
+        self.assertEqual(check_register(text, "notice").findings, ())
+
+
 class TestUi(unittest.TestCase):
     def test_formal_question_in_informal_product(self):
         text = "저장했어요. 사진을 올려 주세요. 이 글을 삭제하시겠습니까?"

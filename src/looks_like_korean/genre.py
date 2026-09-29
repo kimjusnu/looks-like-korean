@@ -71,6 +71,8 @@ _NOUN_ENDING_DA = ("최다", "과다", "바다")
 # 표 칸 안에서 여러 항목이 한 줄로 이어 붙은 경우처럼 eomi 가 목록으로 못 가른 것을 받친다.
 _BULLET_START = re.compile(r"^\s*(?:[◦❍○●◎□■※▸▶•·]|ㅇ\s|[-–]\s|[〔\[(（]?(?:그림|표|사진)\s?\d)")
 _FIELD_LABEL = re.compile(r"^[^\s:：]{1,12}(?:\s[^\s:：]{1,12})?\s?[:：]\s")
+# 편지·공지 끝의 서명 줄(「운영팀 드림」「홍길동 올림」)
+_SIGNATURE = re.compile(r"(?:드림|올림|배상)\s*$")
 
 _OPEN_QUOTES = ("「", "『", "“", "‘")
 _CLOSE_QUOTES = ("」", "』", "”", "’")
@@ -186,7 +188,8 @@ def is_nominal(sentence: Sentence) -> bool:
 
 def _is_item_like(sentence: Sentence) -> bool:
     """목록 기호·그림 설명·서식 칸처럼 서술문이 아닌 줄인가."""
-    return bool(_BULLET_START.match(sentence.text) or _FIELD_LABEL.match(sentence.text))
+    text = sentence.text
+    return bool(_BULLET_START.match(text) or _FIELD_LABEL.match(text) or _SIGNATURE.search(text))
 
 
 def _without_trailing_emoji(sentence: Sentence) -> Sentence:
