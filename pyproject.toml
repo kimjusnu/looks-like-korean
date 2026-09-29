@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "looks-like-korean"
+version = "0.1.0"
+description = "결정론적 한국어 리듬 계측 엔진 — LLM 호출 없음, 외부 의존성 없음"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+looks-like-korean = "looks_like_korean.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
