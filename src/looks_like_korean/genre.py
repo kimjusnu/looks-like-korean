@@ -126,6 +126,14 @@ GENRES: dict[str, GenreProfile] = {
             basis="한 서비스 안에서는 말투를 하나로 통일한다. 오류 메시지도 예외가 아니다",
         ),
         GenreProfile(
+            key="chat",
+            label="대화 답변",
+            levels=("informal", "formal", "plain"),
+            default_level="informal",
+            nominal_in_prose=None,
+            basis="대화 답은 한 가지 말투로 쓴다. 칭찬으로 시작하거나 되묻기로 끝내는 버릇은 tone 규칙이 잡는다",
+        ),
+        GenreProfile(
             key="general",
             label="일반 글",
             levels=("formal", "informal", "plain"),

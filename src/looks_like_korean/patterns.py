@@ -18,8 +18,9 @@ from dataclasses import dataclass
 from .eomi import Sentence, segment
 from .findings import Finding
 from .genre import GENRES, is_quoted
+from .tone import TONE_RULES
 
-__all__ = ["PatternRule", "RULES", "check_patterns", "connective_comma_rate"]
+__all__ = ["PatternRule", "RULES", "check_patterns", "check_tone", "connective_comma_rate"]
 
 ALL_GENRES = frozenset(GENRES)
 
@@ -50,13 +51,6 @@ RULES: tuple[PatternRule, ...] = (
         "문장 첫 접속부사 뒤에 쉼표를 찍었습니다.",
         "쉼표를 지웁니다. 접속부사가 없어도 뜻이 통하면 부사째 지웁니다.",
     ),
-    # A F4 — 「단순한 X를 넘어」는 KCI 초록에서 추세 대비 약 61배 늘었다
-    _rule(
-        "PAT-FRAME", "warn",
-        r"단순(?:한|히)\s*\S+(?:\s\S+)?\s*(?:을|를)?\s*넘어",
-        "「단순한 X를 넘어」 틀입니다.",
-        "틀을 지우고 실제로 하는 일(Y)만 구체적으로 씁니다.",
-    ),
     # A F13 · P P34 — 줄표는 부제 표시에만 쓴다. 숫자 사이 붙임표(2024–2025)는 제외
     _rule(
         "PAT-DASH", "warn",
@@ -78,14 +72,6 @@ RULES: tuple[PatternRule, ...] = (
         r"|(?:인재|개발자|엔지니어|사람|구성원)가\s?되겠습니다",
         "근거 없이 자기 평가로 마무리했습니다.",
         "평가 대신, 그렇게 말할 수 있는 장면이나 수치를 한 문장으로 씁니다.",
-        genres={"self-intro"},
-    ),
-    # P 3-2 — 「이 경험을 통해 ~을 배웠습니다」 마무리. 모든 문항이 같은 교훈으로 끝나기 쉽다
-    _rule(
-        "PAT-LESSON", "review",
-        r"(?:경험을\s?통해|이를\s?통해|이\s?경험으로).{0,60}(?:배웠습니다|깨달았습니다|느꼈습니다)",
-        "「이 경험을 통해 ~을 배웠습니다」 마무리입니다.",
-        "교훈을 요약하지 말고, 그 뒤에 실제로 달라진 행동을 한 문장으로 씁니다.",
         genres={"self-intro"},
     ),
     # U 원칙 3 — 오류 메시지는 상황·이유·해결 방법을 담는다(10곳 합의)
@@ -166,14 +152,6 @@ RULES: tuple[PatternRule, ...] = (
         "느낌표를 썼습니다.",
         "축하처럼 감정이 분명한 순간이 아니면 마침표로 바꿉니다.",
         genres=_UI,
-    ),
-    # U 원칙 13 · A F13 — 이모지는 정보가 될 때만
-    _rule(
-        "PAT-EMOJI", "review",
-        r"[\U0001F300-\U0001FAFF]",
-        "이모지를 썼습니다.",
-        "정보를 더하지 않는 이모지는 지웁니다.",
-        genres=_WRITING | _UI,
     ),
 )
 
@@ -281,4 +259,61 @@ def check_patterns(text: str, genre: str = "general") -> list[Finding]:
         raise ValueError(f"알 수 없는 장르: {genre} (가능: {', '.join(GENRES)})")
     sentences = [s for s in segment(text) if s.kind != "heading" and not is_quoted(s)]
     comma = _comma_findings(sentences) if genre in _COMMA_GENRES else []
-    return [*comma, *_chat_residue_findings(sentences), *_rule_findings(sentences, genre)]
+    return [
+        *comma,
+        *_chat_residue_findings(sentences),
+        *_rule_findings(sentences, genre),
+        *check_tone(text, genre),
+    ]
+
+
+# 인용 부호 안의 말. 같은 길이의 공백으로 지워 줄 번호가 어긋나지 않게 한다.
+_RE_QUOTED_SPAN = re.compile(r"“[^”\n]{0,200}”|\"[^\"\n]{0,200}\"|「[^」\n]{0,200}」|『[^』\n]{0,200}』|‘[^’\n]{0,200}’")
+_TONE_EXAMPLES = 3
+
+
+def _blank_quotes(text: str) -> str:
+    return _RE_QUOTED_SPAN.sub(lambda m: " " * len(m.group(0)), text)
+
+
+def _snippet(text: str, start: int, end: int, width: int = 24) -> str:
+    line_start = text.rfind("\n", 0, start) + 1
+    line_end = text.find("\n", start)
+    line_end = len(text) if line_end < 0 else line_end
+    end = min(end, line_end)
+    left, right = max(line_start, start - width), min(line_end, end + width)
+    body = " ".join(text[left:right].split())
+    return ("…" if left > line_start else "") + body + ("…" if right < line_end else "")
+
+
+def check_tone(text: str, genre: str = "general") -> list[Finding]:
+    """AI 말버릇 틀(tone.py) 검사. 틀마다 결과를 한 건으로 묶어 횟수와 앞의 예시 몇 개를 보여 준다."""
+    if genre not in GENRES:
+        raise ValueError(f"알 수 없는 장르: {genre} (가능: {', '.join(GENRES)})")
+    blanked = _blank_quotes(text)
+    findings = []
+    for code, severity, name, pattern, fix, genres, scope in TONE_RULES:
+        if genres is not None and genre not in genres:
+            continue
+        source = text if scope == "raw" else blanked
+        matches = list(re.finditer(pattern, source, re.M))
+        if not matches:
+            continue
+        first = matches[0]
+        # 매치가 줄바꿈에서 시작하는 틀이 있어, 앞 공백을 건너뛴 자리로 줄을 가린다. 같은 줄은 한 번만 보인다.
+        by_line = {}
+        for m in matches:
+            at = m.start() + (len(m.group(0)) - len(m.group(0).lstrip()))
+            by_line.setdefault(text.count("\n", 0, at), (at, m.end()))
+        examples = " / ".join(_snippet(text, a, b) for a, b in list(by_line.values())[:_TONE_EXAMPLES])
+        findings.append(
+            Finding(
+                rule=code,
+                severity=severity,
+                message=f"{name} · {len(matches)}곳",
+                suggestion=fix,
+                excerpt=examples,
+                line=text.count("\n", 0, first.start()) + 1,
+            )
+        )
+    return findings
