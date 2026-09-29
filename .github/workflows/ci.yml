@@ -1,0 +1,39 @@
+name: 테스트
+
+# main 에 push 되거나 PR 이 열리면 돌린다. 의존성 0개(표준 라이브러리만)라
+# 캐시·빌드·배포 단계가 필요 없다. 테스트가 전부다.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # pyproject 의 requires-python = ">=3.10" 을 하한으로 그대로 매트릭스에 쓴다.
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    env:
+      # Windows 로컬(cp949/cp1252)과 출력이 달라지지 않게 고정한다.
+      PYTHONIOENCODING: utf-8
+      # 패키지 미설치 상태로 소스에서 바로 실행한다.
+      PYTHONPATH: src
+
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 세팅
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 단위 테스트
+        run: python -m unittest discover -s tests -v
