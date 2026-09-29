@@ -122,7 +122,7 @@ GENRES: dict[str, GenreProfile] = {
             label="화면 문구",
             levels=("informal", "formal"),
             default_level="informal",
-            nominal_in_prose="review",
+            nominal_in_prose=None,         # 버튼·라벨은 명사형이 정상이다(「12장 지우기」「저장」)
             basis="한 서비스 안에서는 말투를 하나로 통일한다. 오류 메시지도 예외가 아니다",
         ),
         GenreProfile(
