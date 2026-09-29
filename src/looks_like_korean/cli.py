@@ -4,6 +4,8 @@
     python -m looks_like_korean score 파일.md --json
     python -m looks_like_korean compare 원문.md 수정문.md
     python -m looks_like_korean compare 원문.md 수정문.md --json
+    python -m looks_like_korean check 파일.md --genre self-intro
+    python -m looks_like_korean check 파일.md --genre ui --level informal --strict
 """
 
 from __future__ import annotations
@@ -12,6 +14,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from .findings import findings_to_dict, has_warnings, render_findings
+from .genre import GENRES, LEVELS, check_register
 from .metrics import METRIC_KEYS, analyze
 from .report import analysis_to_dict, render_compare, render_score, to_json
 
@@ -67,12 +71,45 @@ def _build_parser() -> argparse.ArgumentParser:
     p_cmp.add_argument("after", help="수정문 파일")
     p_cmp.add_argument("--json", action="store_true", help="기계 판독용 JSON")
 
+    genre_help = " · ".join(f"{k}={g.label}" for k, g in GENRES.items())
+    p_chk = sub.add_parser("check", help="장르 기준에 맞지 않는 곳을 찾는다")
+    p_chk.add_argument("file", help="검사할 마크다운/텍스트 파일")
+    p_chk.add_argument("--genre", choices=list(GENRES), default="general", help=genre_help)
+    p_chk.add_argument(
+        "--level", choices=list(LEVELS), default=None,
+        help="기준 말투를 직접 지정 (formal=합쇼체 · informal=해요체 · plain=해라체)",
+    )
+    p_chk.add_argument("--json", action="store_true", help="기계 판독용 JSON")
+    p_chk.add_argument("--strict", action="store_true", help="경고가 있으면 종료 코드 1")
+
     return parser
+
+
+def _run_check(args: argparse.Namespace) -> int:
+    text = _read_text(args.file)
+    report = check_register(text, args.genre, args.level)
+    findings = list(report.findings)
+    name = Path(args.file).name
+    if args.json:
+        print(to_json(findings_to_dict(findings, {
+            "command": "check",
+            "file": name,
+            "genre": report.genre.key,
+            "target_level": report.target_level,
+            "target_reason": report.target_reason,
+            "level_counts": report.level_counts,
+        })))
+    else:
+        print(render_findings(findings, report.header_lines(), name))
+    return 1 if args.strict and has_warnings(findings) else 0
 
 
 def main(argv: list[str] | None = None) -> int:
     _force_utf8()
     args = _build_parser().parse_args(argv)
+
+    if args.command == "check":
+        return _run_check(args)
 
     if args.command == "score":
         text = _read_text(args.file)

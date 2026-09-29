@@ -382,6 +382,19 @@ def extract_blocks(text: str) -> list[str]:
       * 목록 마커로 시작하는 줄은 **항상 그 자체로** 새 문단
         (한 항목 = 한 단위 리듬으로 보아야 하기 때문)
     """
+    return [block for block, _ in extract_blocks_with_kind(text)]
+
+
+# 블록 종류. 개조식 목록은 명사형 종결이 정상이므로 말투 검사에서 본문과 구분한다.
+BLOCK_KINDS: tuple[str, ...] = ("prose", "list", "heading")
+
+
+def extract_blocks_with_kind(text: str) -> list[tuple[str, str]]:
+    """extract_blocks 와 같은 블록을 (블록, 종류) 로 돌려준다.
+
+    종류는 BLOCK_KINDS 중 하나다. 블록을 나누는 규칙은 extract_blocks 와 같다.
+    제목 줄이 빈 줄 없이 본문과 붙어 있으면 한 블록이 되므로 prose 로 본다.
+    """
     body = _RE_HTML_COMMENT.sub(" ", text)
     # 펜스 코드 블록 제거 — ``` 으로 시작하는 줄부터 다음 ``` 또는 EOF 까지
     kept: list[str] = []
@@ -402,25 +415,29 @@ def extract_blocks(text: str) -> list[str]:
             continue
         kept.append(raw)
 
-    blocks: list[str] = []
+    blocks: list[tuple[str, str]] = []
     buf: list[str] = []
+    buf_all_heading = True
+
+    def flush() -> None:
+        if buf:
+            blocks.append((" ".join(buf), "heading" if buf_all_heading else "prose"))
+
     for raw in kept:
         is_item = _is_list_item_line(raw)
         line = _clean_line(raw)
         if not line:
-            if buf:
-                blocks.append(" ".join(buf))
-                buf = []
+            flush()
+            buf, buf_all_heading = [], True
             continue
         if is_item:
-            if buf:
-                blocks.append(" ".join(buf))
-                buf = []
-            blocks.append(line)
+            flush()
+            buf, buf_all_heading = [], True
+            blocks.append((line, "list"))
             continue
-        buf.append(line)
-    if buf:
-        blocks.append(" ".join(buf))
+        buf = [*buf, line]
+        buf_all_heading = buf_all_heading and bool(_RE_HEADING.match(raw))
+    flush()
     return blocks
 
 
@@ -545,12 +562,13 @@ class Sentence:
     paragraph: int      # 문단 번호
     pos: int            # 문단 내 순번(0부터)
     eojeol: int         # 어절 수
+    kind: str = "prose"  # 블록 종류(BLOCK_KINDS): 본문·목록 항목·제목
 
 
 def segment(text: str) -> list[Sentence]:
     """원고 → 마디 리스트. 마디 중 한글이 없는 것은 걸러 낸다."""
     out: list[Sentence] = []
-    for p_idx, block in enumerate(extract_blocks(text)):
+    for p_idx, (block, kind) in enumerate(extract_blocks_with_kind(text)):
         for s_idx, (piece, term) in enumerate(_split_block(block)):
             if not has_hangul(piece):
                 continue
@@ -565,6 +583,7 @@ def segment(text: str) -> list[Sentence]:
                     paragraph=p_idx,
                     pos=s_idx,
                     eojeol=count_eojeol(piece),
+                    kind=kind,
                 )
             )
     return out
