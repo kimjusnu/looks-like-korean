@@ -19,7 +19,7 @@ from .genre import GENRES, LEVELS, RegisterReport, check_register
 from .metrics import METRIC_KEYS, Analysis, Metric, analyze
 from .report import render_compare, render_score, to_json
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 __all__ = [
     "REGISTERS",
