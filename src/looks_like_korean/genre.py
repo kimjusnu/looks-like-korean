@@ -190,6 +190,11 @@ def _without_trailing_emoji(sentence: Sentence) -> Sentence:
     return replace(sentence, text=stripped, register=register, ending=ending)
 
 
+def _is_exempt_request(sentence: Sentence, profile: GenreProfile) -> bool:
+    """화면 문구의 「~해 주세요」. 요청은 서비스 말투와 상관없이 이렇게 쓴다(ux-writing.md 4-2)."""
+    return profile.key == "ui" and strip_tail(sentence.text).endswith("주세요")
+
+
 def speech_level(sentence: Sentence) -> str | None:
     """문장의 높임 등급. 명사형·종결 생략·인용문은 None."""
     if is_quoted(sentence) or is_nominal(sentence):
@@ -265,11 +270,10 @@ def check_register(text: str, genre: str = "general", level: str | None = None) 
         raise ValueError(f"알 수 없는 말투: {level} (가능: {', '.join(LEVELS)})")
     profile = GENRES[genre]
     sentences = [_without_trailing_emoji(s) for s in segment(text) if s.kind != "heading"]
-    leveled = [(s, speech_level(s)) for s in sentences]
+    leveled = [(s, speech_level(s)) for s in sentences if not _is_exempt_request(s, profile)]
     leveled = [(s, lv) for s, lv in leveled if lv is not None]
     counts = Counter(lv for _, lv in leveled)
-    prose_counts = Counter(lv for s, lv in leveled if s.kind == "prose")
-    target, reason = _choose_target(profile, prose_counts, level)
+    target, reason = _choose_target(profile, counts, level)
 
     off = [(s, lv) for s, lv in leveled if lv != target]
     doc_level = (

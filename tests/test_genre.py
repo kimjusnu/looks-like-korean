@@ -157,9 +157,20 @@ class TestUi(unittest.TestCase):
         self.assertEqual(rules(report), [("REG-MIX", 2)])
 
     def test_trailing_emoji_does_not_hide_level(self):
-        text = "저장했어요. 사진을 올려 주세요. 알 수 없는 오류가 발생했습니다 😢"
+        text = "저장했어요. 사진을 올렸어요. 알 수 없는 오류가 발생했습니다 😢"
         report = check_register(text, "ui")
         self.assertEqual(report.level_counts, {"informal": 2, "formal": 1})
+        self.assertEqual(rules(report), [("REG-MIX", 2)])
+
+    def test_request_is_exempt_in_ui(self):
+        # 요청은 서비스 말투와 상관없이 「~해 주세요」로 쓴다.
+        text = "네트워크가 불안정합니다. 다시 시도해 주세요. 즐겨찾기한 사진이 없습니다."
+        self.assertEqual(check_register(text, "ui").findings, ())
+
+    def test_list_items_count_toward_majority(self):
+        text = "\n".join(["1) 연결이 끊겼습니다.", "2) 사진이 없습니다.", "", "사진을 지울까요? 설정을 바꿨습니다."])
+        report = check_register(text, "ui")
+        self.assertEqual(report.target_level, "formal")
         self.assertEqual(rules(report), [("REG-MIX", 2)])
 
     def test_headings_are_ignored(self):
