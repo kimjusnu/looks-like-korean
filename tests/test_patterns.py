@@ -28,6 +28,8 @@ class TestRulePairs(unittest.TestCase):
         ("PAT-DASH", "general", "이 기능은 — 누르지 않아도 — 저장합니다.", "2024–2025년 자료를 봤습니다."),
         ("PAT-DOUBLE-PASSIVE", "general", "결과가 공개되어졌습니다.", "결과가 공개되었습니다."),
         ("PAT-SELF-EVAL", "self-intro", "저는 이 직무에 적합한 인재라고 확신합니다.", "저는 예약 시스템을 두 달 동안 운영했습니다."),
+        ("PAT-SELF-EVAL", "self-intro", "마감과 품질을 함께 지키는 개발자가 되겠습니다.", "입사 후에는 결제 오류 알림부터 손보겠습니다."),
+        ("PAT-LESSON", "self-intro", "이 경험을 통해 소통의 중요성을 배웠습니다.", "그 뒤로 회의 첫 10분은 남은 일부터 셉니다."),
         ("PAT-UI-GENERIC-ERROR", "ui", "오류가 발생했습니다.", "인터넷 연결이 끊겼어요. 연결되면 다시 시도해 주세요."),
         ("PAT-TRANS", "general", "회의를 통해 일정을 정했습니다.", "회의에서 일정을 정했습니다."),
         ("PAT-CLICHE", "proposal", "이러한 결과는 제도 개선이 필요함을 보여 줍니다.", "신청률이 12%에서 30%로 올랐습니다."),
@@ -100,6 +102,16 @@ class TestConnectiveComma(unittest.TestCase):
     def test_noun_lists_are_not_connectives(self):
         text = "광고, 홍보, 참고 자료를 모았습니다. 측면, 전면, 화면을 모두 봤습니다. 최고, 최저 값을 적었습니다."
         self.assertEqual(connective_comma_rate(segment(text))[0], 0)
+
+
+class TestChatResidue(unittest.TestCase):
+    def test_first_and_last_sentence_only(self):
+        head = "제안 요지를 5줄로 정리해 드릴게요. 신청률은 12%입니다. 문자 안내를 제안합니다."
+        self.assertIn("PAT-CHAT-RESIDUE", codes(head, "proposal"))
+        preface = "자기소개서 본문을 500자 안팎으로 맞추어 쓰겠습니다. 저는 예약 사이트를 만들었습니다."
+        self.assertIn("PAT-CHAT-RESIDUE", codes(preface, "self-intro"))
+        middle = "저는 예약 사이트를 만들었습니다. 고객에게 편한 화면을 만들어 드리겠습니다. 그 일을 계속하고 싶습니다."
+        self.assertNotIn("PAT-CHAT-RESIDUE", codes(middle, "self-intro"))
 
 
 class TestErrors(unittest.TestCase):

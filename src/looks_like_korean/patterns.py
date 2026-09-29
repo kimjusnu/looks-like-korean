@@ -75,9 +75,17 @@ RULES: tuple[PatternRule, ...] = (
     _rule(
         "PAT-SELF-EVAL", "warn",
         r"(?:적합한|적임자|필요한\s?인재|준비된\s?인재|최고의\s?인재)[^.!?]{0,25}(?:생각합니다|확신합니다|자신합니다|믿습니다)"
-        r"|인재가\s?되겠습니다",
+        r"|(?:인재|개발자|엔지니어|사람|구성원)가\s?되겠습니다",
         "근거 없이 자기 평가로 마무리했습니다.",
         "평가 대신, 그렇게 말할 수 있는 장면이나 수치를 한 문장으로 씁니다.",
+        genres={"self-intro"},
+    ),
+    # P 3-2 — 「이 경험을 통해 ~을 배웠습니다」 마무리. 모든 문항이 같은 교훈으로 끝나기 쉽다
+    _rule(
+        "PAT-LESSON", "review",
+        r"(?:경험을\s?통해|이를\s?통해|이\s?경험으로).{0,60}(?:배웠습니다|깨달았습니다|느꼈습니다)",
+        "「이 경험을 통해 ~을 배웠습니다」 마무리입니다.",
+        "교훈을 요약하지 말고, 그 뒤에 실제로 달라진 행동을 한 문장으로 씁니다.",
         genres={"self-intro"},
     ),
     # U 원칙 3 — 오류 메시지는 상황·이유·해결 방법을 담는다(10곳 합의)
@@ -223,6 +231,32 @@ def _comma_findings(sentences: list[Sentence]) -> list[Finding]:
     return [doc, *each]
 
 
+# 모델이 결과물 앞뒤에 남기는 대화 흔적. 본문 중간의 「만들어 드리겠습니다」 같은 정상 문장을
+# 잡지 않도록 첫 문장과 마지막 문장에만 적용한다.
+_RE_CHAT_RESIDUE = re.compile(
+    r"(?:정리|작성|요약|구성|맞추어|맞춰)\S{0,4}\s?(?:드릴게요|드리겠습니다|볼게요|보겠습니다|쓰겠습니다)"
+    r"|(?:써|만들어)\s?드릴게요"
+    r"|^(?:물론입니다|알겠습니다|좋습니다|네,)\s"
+)
+
+
+def _chat_residue_findings(sentences: list[Sentence]) -> list[Finding]:
+    edges = {s.index: s for s in (sentences[:1] + sentences[-1:])}
+    return [
+        Finding(
+            rule="PAT-CHAT-RESIDUE",
+            severity="warn",
+            message="AI에게 요청하고 받은 답의 대화 흔적이 남아 있습니다.",
+            suggestion="결과물이 아닌 안내 문장은 지웁니다.",
+            sentence_index=s.index,
+            paragraph=s.paragraph,
+            excerpt=s.text,
+        )
+        for s in edges.values()
+        if _RE_CHAT_RESIDUE.search(s.text)
+    ]
+
+
 def _rule_findings(sentences: list[Sentence], genre: str) -> list[Finding]:
     rules = [r for r in RULES if genre in r.genres]
     return [
@@ -247,4 +281,4 @@ def check_patterns(text: str, genre: str = "general") -> list[Finding]:
         raise ValueError(f"알 수 없는 장르: {genre} (가능: {', '.join(GENRES)})")
     sentences = [s for s in segment(text) if s.kind != "heading" and not is_quoted(s)]
     comma = _comma_findings(sentences) if genre in _COMMA_GENRES else []
-    return [*comma, *_rule_findings(sentences, genre)]
+    return [*comma, *_chat_residue_findings(sentences), *_rule_findings(sentences, genre)]
