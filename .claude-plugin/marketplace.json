@@ -1,0 +1,16 @@
+{
+  "name": "looks-like-korean",
+  "description": "한국어 문체 도구 모음: AI가 쓴 티가 나지 않는 한국어를 쓰게 돕는 스킬과 검사기",
+  "owner": {
+    "name": "kimjusnu",
+    "url": "https://github.com/kimjusnu"
+  },
+  "plugins": [
+    {
+      "name": "looks-like-korean",
+      "source": "./",
+      "description": "AI가 쓴 티가 나지 않는 한국어 쓰기: 장르별 말투 규칙, 결정론적 검사기, 윤문 전후 사실 대조",
+      "version": "0.3.0"
+    }
+  ]
+}
