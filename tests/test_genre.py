@@ -173,6 +173,10 @@ class TestUi(unittest.TestCase):
         self.assertEqual(report.target_level, "formal")
         self.assertEqual(rules(report), [("REG-MIX", 2)])
 
+    def test_button_labels_are_not_nominal_findings(self):
+        text = "사진 12장을 지울까요? 선택한 사진이 지워져요. 취소 / 12장 지우기"
+        self.assertEqual(check_register(text, "ui").findings, ())
+
     def test_headings_are_ignored(self):
         text = "## 설정\n\n알림을 켰어요.\n\n## 계정\n\n비밀번호를 바꿨어요."
         self.assertEqual(check_register(text, "ui").findings, ())
