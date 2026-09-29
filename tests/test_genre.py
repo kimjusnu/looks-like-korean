@@ -156,6 +156,12 @@ class TestUi(unittest.TestCase):
         self.assertEqual(report.target_level, "informal")
         self.assertEqual(rules(report), [("REG-MIX", 2)])
 
+    def test_trailing_emoji_does_not_hide_level(self):
+        text = "저장했어요. 사진을 올려 주세요. 알 수 없는 오류가 발생했습니다 😢"
+        report = check_register(text, "ui")
+        self.assertEqual(report.level_counts, {"informal": 2, "formal": 1})
+        self.assertEqual(rules(report), [("REG-MIX", 2)])
+
     def test_headings_are_ignored(self):
         text = "## 설정\n\n알림을 켰어요.\n\n## 계정\n\n비밀번호를 바꿨어요."
         self.assertEqual(check_register(text, "ui").findings, ())
