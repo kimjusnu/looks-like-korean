@@ -31,6 +31,7 @@ class Finding:
     sentence_index: int | None = None  # 문서 단위 결과면 None
     paragraph: int | None = None
     excerpt: str = ""    # 해당 문장(또는 일부)
+    line: int | None = None  # 원문 줄 번호(말버릇 틀처럼 원문에 돌린 검사)
 
 
 def has_warnings(findings: Iterable[Finding]) -> bool:
@@ -51,7 +52,12 @@ def render_findings(findings: list[Finding], header_lines: list[str], name: str)
         return "\n".join(lines)
     lines.append(f"경고 {len(warn)}건 · 검토 {len(review)}건")
     for f in [*warn, *review]:
-        where = "문서 전체" if f.sentence_index is None else f"문장 {f.sentence_index + 1}"
+        if f.sentence_index is not None:
+            where = f"문장 {f.sentence_index + 1}"
+        elif f.line is not None:
+            where = f"{f.line}번째 줄"
+        else:
+            where = "문서 전체"
         lines.append("")
         lines.append(f"[{_SEVERITY_LABEL[f.severity]}] {f.rule} · {where}")
         if f.excerpt:
