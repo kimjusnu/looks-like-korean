@@ -1,105 +1,102 @@
 ---
 name: looks-like-korean
-description: Use when writing or revising Korean prose that must not read as machine-written - proposals, reports, self-introductions, essays, memos. Declares sentence-ending rhythm targets BEFORE writing, then measures the result with a deterministic engine and regenerates only the off-target paragraphs. No LLM-based detection.
+description: Use when writing or revising Korean text that must not read as AI-written — 자기소개서(self-introductions), 제안서·보고서(proposals/reports), 공문·안내문(official notices), app/web UI copy(버튼·오류·빈 화면·확인 창 문구), and general prose such as blogs or emails. Also use when writing Korean UI strings in code. Triggers include "AI 어투", "AI 티", "사람이 쓴 것처럼", "자소서 다듬어", "문구 자연스럽게", "UX 라이팅". Picks the genre first, applies that genre's register and rules, then verifies with a deterministic checker (no LLM call) and a before/after fact diff.
 ---
 
 # looks-like-korean
 
-## What this is for
+AI가 쓴 티가 나지 않는 한국어를 쓰고 고친다. 핵심은 세 가지다.
 
-A Korean text reads as machine-written when every sentence ends the same way. Vocabulary
-editing does not fix that, and no amount of prompt instruction reliably prevents it. So the
-rhythm is decided **before** the prose, and checked **after** it.
+1. **장르가 말투를 정한다.** 자기소개서, 제안서, 공문, 화면 문구는 맞는 말투와 규칙이 다르다.
+   종결어미를 「다양하게」 바꾸면 더 사람 같아진다는 주장은 근거가 없고, 이 저장소의 첫 버전이 7쌍 모두에서 실패했다.
+2. **AI 글의 가장 큰 문제는 어투보다 내용이다.** 누구에게나 붙일 수 있는 문장, 장면과 수치가 없는 문장이 먼저 걸러진다.
+3. **윤문은 문체만 바꾼다.** 숫자, 고유명사, 인용한 말은 그대로 둔다. 없는 사실을 지어내지 않는다.
 
-## The one claim this skill makes
+근거는 저장소의 `docs/research/`(공개 자료 75곳 조사)와 `docs/research/measurements.md`(실제 원고 측정)에 있다.
 
-> The register of your sentence endings should vary, and you should be able to measure by how
-> much.
+## 검사 엔진 실행
 
-That claim holds regardless of whether the engine's human-versus-machine hypothesis holds.
-That hypothesis is **still unproven** — see `docs/RESEARCH.md`. Do not use this skill to
-claim a text is human-written. Use it to keep a text from being register-uniform.
-
-## Procedure
-
-### 1. Fix the target before writing (2 minutes, before any prose)
-
-For the document, decide and write down:
-
-- **Length** and section count.
-- **Ending register budget** — not "use 해요체". Explicitly: e.g. `~습니다` 4, `~해요` 2,
-  명사형 1, 의문 1, across 8 sentences. The point is to plan the *distribution*, not a style.
-- **Longest run of one register you will tolerate** — 4. Not "no more than a few".
-- **Two places a sentence will be allowed to be very short** (under 5 words) and one place
-  that will be allowed to be very long (over 30). Extremes are what a reader feels without
-  noticing.
-
-If the document is 3 sentences, skip this step. The machinery is not worth it.
-
-### 2. Draft normally
-
-Write the document. Do not think about the metrics while writing; that produces text that
-scores well and reads like nothing.
-
-### 3. Measure
+표준 라이브러리만 쓰는 파이썬 패키지다. 이 스킬 폴더의 두 단계 위가 저장소 루트다.
 
 ```bash
-python -m looks_like_korean score draft.md
+# 설치 없이 (스킬 폴더 기준 ../../src)
+PYTHONPATH="<이 스킬 폴더>/../../src" python -m looks_like_korean check 초안.md --genre self-intro
+# 또는 저장소 루트에서 한 번 설치
+pip install -e .
 ```
 
-Read `uniformity_index` first. Then `max_same_register_run`, then `sentence_len_gini`.
+Windows 콘솔에서 한글이 깨지면 `PYTHONIOENCODING=utf-8`을 붙인다.
 
-These are **your own targets**, not reference values. The comparison that means something:
+## 절차
+
+### 1. 장르를 정한다
+
+| 장르 | `--genre` | 먼저 읽을 규칙 |
+|---|---|---|
+| 자기소개서 | `self-intro` | `references/self-intro.md` |
+| 제안서·보고서·기획서 | `proposal` | `references/proposal.md` |
+| 공문·공지·대국민 안내문 | `notice` | `references/notice.md` |
+| 앱·웹 화면 문구 | `ui` | `references/ui.md` |
+| 블로그·수기·메일·설명문 | `general` | `references/general.md` |
+
+요청에서 장르가 분명하지 않으면 한 번만 묻는다. **해당 규칙 문서를 읽기 전에는 쓰지 않는다.**
+
+### 2. 재료를 확인한다
+
+- **자기소개서:** 문항 원문, 글자 수, 지원 회사·직무의 고유 정보, 본인의 실제 경험(날짜·장소·결정·결과 수치).
+  재료가 없으면 무엇이 없는지 묻는다. **확인되지 않은 경험·수치·성과를 지어내지 않는다.**
+- **화면 문구:** 서비스가 이미 쓰는 말투(기존 문구에서 「-요.」와 「-니다.」를 세어 많은 쪽), 문구가 놓일 자리(버튼·토스트·확인 창·빈 화면·입력 오류).
+  자리를 모르면 먼저 묻는다.
+- **제안서·공문:** 서식이 정한 문체와 분량, 숫자의 출처.
+
+### 3. 쓰거나 고친다
+
+- 규칙 문서의 「쓰는 규칙」을 따른다.
+- 고칠 때는 **뜻 단위로 다시 쓴다.** 금지어를 동의어로 바꾸는 것으로 끝내지 않는다. AI 어휘는 모델 세대마다 바뀐다.
+- 사람이 쓴 초안이 있으면 그 초안에서 출발한다. 처음부터 새로 쓰는 것보다 AI 티가 덜 생긴다.
+- 문장 단위의 번역투·상투구를 더 깊이 다듬어야 하면, 설치돼 있는 경우 `humanize-korean` 스킬을 이어서 쓸 수 있다.
+  단, 그 뒤에도 아래 4~5단계를 다시 돌린다.
+
+### 4. 기계 검사를 돌린다
 
 ```bash
-python -m looks_like_korean compare original.md revised.md
+python -m looks_like_korean check 초안.md --genre <장르>
 ```
 
-If `uniformity_index` in the revision is not meaningfully lower, the revision did not change
-the rhythm — it changed words.
+- **경고는 모두 고친다.** 고치지 않을 경고가 있으면 그 이유를 보고에 적는다.
+- **검토는 다시 읽고 판단한다.** 정상 쓰임도 많은 신호라 모두 고칠 필요는 없다.
+- 본인이 장르 기본과 다른 말투를 원하면 `--level formal|informal|plain`으로 기준을 바꾼다.
+- 화면 문구는 문구를 한 줄에 하나씩 적은 텍스트 파일을 만들어 검사한다. 빈 줄로 문구를 나누면 서로 다른 문장으로 본다.
 
-### 4. Regenerate off-target paragraphs only
+### 5. 고쳤다면 사실을 대조한다
 
-For any paragraph above target, rewrite **that paragraph** with the concrete change named:
+```bash
+python -m looks_like_korean facts 원문.md 수정문.md --strict
+```
 
-- one sentence switched to a different register — not a swap for its own sake, but because
-  the paragraph has been ending the same way for three sentences
-- one very short sentence placed where the paragraph has been running at one length
-- one nominal ending (`~함`, `~지`, `~기`) where the paragraph is closing a thought instead
-  of stating a verdict
-- one connective adverb (「그러나」 「또한」 「결국」) deleted, the two halves joined directly
+- 「빠진 것」은 되살리거나, 일부러 뺀 이유를 적는다.
+- 「새로 생긴 것」은 근거를 확인한다. **근거 없이 생긴 숫자는 지운다.**
 
-Do not touch paragraphs that already meet the target. Rhythm variety across a document
-requires some paragraphs to be uniform.
+### 6. 사람이 읽고 판단할 항목을 확인한다
 
-### 5. Report the diff, not just the new text
+규칙 문서의 체크리스트를 문단마다 확인한다. 기계 검사로는 장면·구체성·논리 연결을 판단할 수 없다.
 
-Output the before/after of every changed paragraph, with the reason for that paragraph's
-change. A revision whose rhythm moved but whose numbers are not shown cannot be checked.
+### 7. 보고한다
 
-## Hard rules
+- 바꾼 문단마다 고치기 전 → 고친 후와 이유
+- `check` 결과(경고·검토 건수)와 `facts` 결과
+- 남은 검토 항목과, 본인에게 확인이 필요한 사실
 
-- **Facts do not change.** Numbers, proper nouns, conditions, and direct quotations are
-  identical before and after. This is first, and it is not negotiable. Rhythm edits that
-  alter a figure are a bug.
-- **Length within ±3%** unless the change was requested.
-- **Do not convert the register globally.** A bulk `~습니다` → `~해요` pass is the failure
-  mode this whole project exists to prevent.
-- **Genre register is a rule, not a suggestion.** An official notice should not suddenly
-  become conversational. If the document's genre demands one register throughout, that is
-  the correct target, and `uniformity_index` near 1.0 is the right answer for it. Say so
-  instead of fighting the metric.
+## 하지 않는 것
 
-## When not to use this
+- 종결어미를 일부러 돌려쓰지 않는다. 장르가 한 가지 말투를 요구하면 끝까지 그 말투가 맞다.
+- 문서 전체의 말투를 장르 기준과 다른 쪽으로 일괄 변환하지 않는다.
+- AI 탐지기 점수를 맞추려고 문장을 비틀지 않는다. 탐지기는 오판이 많고, 읽는 사람이 보는 것은 구체성이다.
+- 인용, 법령 조문, 표, 코드, 고정된 서식 문구는 고치지 않는다.
+- 없는 경험·감정·수치로 「사람 냄새」를 만들지 않는다.
 
-- Under ~10 sentences. Not enough text for the metric to mean anything.
-- Direct quotation, references, code, tables, legal citations, and formulae — measure the
-  prose around them, never the citations.
-- A document that must not be edited at all, such as an official form whose wording is fixed.
-  In that case the register is not yours to choose. Leave it alone.
+## 검사 엔진이 못 하는 것
 
-## Files
-
-- `src/looks_like_korean/` — the engine (standard library only)
-- `docs/RESEARCH.md` — what is known, what is not, and the Korean classifier pitfalls
-- `eval/examples.json` — self-authored before/after pairs to imitate the *shape* of a change
+- 한글로 쓴 수(「스무 명」)와 한글 고유명사의 사실 대조
+- 자기소개서·공문·화면 문구의 사람 글 기준선 측정(제안서만 실측, `docs/research/measurements.md`)
+- 문맥상 뜻이 맞는지, 장면이 구체적인지 판단(6단계에서 사람이 확인)
