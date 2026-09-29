@@ -6,6 +6,7 @@
     python -m looks_like_korean compare 원문.md 수정문.md --json
     python -m looks_like_korean check 파일.md --genre self-intro
     python -m looks_like_korean check 파일.md --genre ui --level informal --strict
+    python -m looks_like_korean facts 원문.md 수정문.md --strict
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from .facts import compare_facts
 from .findings import findings_to_dict, has_warnings, render_findings
 from .genre import GENRES, LEVELS, check_register
 from .metrics import METRIC_KEYS, analyze
@@ -83,6 +85,12 @@ def _build_parser() -> argparse.ArgumentParser:
     p_chk.add_argument("--json", action="store_true", help="기계 판독용 JSON")
     p_chk.add_argument("--strict", action="store_true", help="경고가 있으면 종료 코드 1")
 
+    p_fact = sub.add_parser("facts", help="윤문 전후로 숫자·로마자 낱말·인용한 말이 바뀌었는지 본다")
+    p_fact.add_argument("before", help="원문 파일")
+    p_fact.add_argument("after", help="수정문 파일")
+    p_fact.add_argument("--json", action="store_true", help="기계 판독용 JSON")
+    p_fact.add_argument("--strict", action="store_true", help="빠지거나 생긴 사실이 있으면 종료 코드 1")
+
     return parser
 
 
@@ -108,12 +116,31 @@ def _run_check(args: argparse.Namespace) -> int:
     return 1 if args.strict and has_warnings(findings) else 0
 
 
+def _run_facts(args: argparse.Namespace) -> int:
+    report = compare_facts(_read_text(args.before), _read_text(args.after))
+    findings = list(report.findings)
+    name = f"{Path(args.before).name} → {Path(args.after).name}"
+    if args.json:
+        print(to_json(findings_to_dict(findings, {
+            "command": "facts",
+            "before": Path(args.before).name,
+            "after": Path(args.after).name,
+            "before_total": report.before_total,
+            "after_total": report.after_total,
+        })))
+    else:
+        print(render_findings(findings, report.header_lines(), name))
+    return 1 if args.strict and has_warnings(findings) else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     _force_utf8()
     args = _build_parser().parse_args(argv)
 
     if args.command == "check":
         return _run_check(args)
+    if args.command == "facts":
+        return _run_facts(args)
 
     if args.command == "score":
         text = _read_text(args.file)
