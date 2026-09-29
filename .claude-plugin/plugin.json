@@ -1,6 +1,6 @@
 {
   "name": "looks-like-korean",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "AI가 쓴 티가 나지 않는 한국어 쓰기: 장르별 말투(자기소개서·제안서·공문·화면 문구) 규칙, 결정론적 검사기, 윤문 전후 사실 대조",
   "author": {
     "name": "kimjusnu",
