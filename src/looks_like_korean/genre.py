@@ -20,9 +20,9 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
-from .eomi import Sentence, segment, strip_tail
+from .eomi import Sentence, classify_eomi, segment, strip_tail
 from .findings import Finding
 
 __all__ = [
@@ -75,6 +75,9 @@ _FIELD_LABEL = re.compile(r"^[^\s:：]{1,12}(?:\s[^\s:：]{1,12})?\s?[:：]\s")
 _OPEN_QUOTES = ("「", "『", "“", "‘")
 _CLOSE_QUOTES = ("」", "』", "”", "’")
 _QUOTE_TAIL = re.compile(r"[」』”’\"'][\s.!?)\]]*$")
+
+# 문장 끝에 붙은 이모지. 떼지 않으면 「발생했습니다 😢」의 높임 등급을 못 읽는다.
+_TRAILING_EMOJI = re.compile(r"[\s\U0001F300-\U0001FAFF\u2600-\u27BF]+$")
 
 
 @dataclass(frozen=True)
@@ -178,6 +181,15 @@ def _is_item_like(sentence: Sentence) -> bool:
     return bool(_BULLET_START.match(sentence.text) or _FIELD_LABEL.match(sentence.text))
 
 
+def _without_trailing_emoji(sentence: Sentence) -> Sentence:
+    """문장 끝 이모지를 떼고 다시 분류한 새 Sentence. 이모지가 없으면 그대로 돌려준다."""
+    stripped = _TRAILING_EMOJI.sub("", sentence.text)
+    if stripped == sentence.text or not stripped:
+        return sentence
+    register, ending = classify_eomi(stripped, sentence.terminator)
+    return replace(sentence, text=stripped, register=register, ending=ending)
+
+
 def speech_level(sentence: Sentence) -> str | None:
     """문장의 높임 등급. 명사형·종결 생략·인용문은 None."""
     if is_quoted(sentence) or is_nominal(sentence):
@@ -252,7 +264,7 @@ def check_register(text: str, genre: str = "general", level: str | None = None) 
     if level is not None and level not in LEVELS:
         raise ValueError(f"알 수 없는 말투: {level} (가능: {', '.join(LEVELS)})")
     profile = GENRES[genre]
-    sentences = [s for s in segment(text) if s.kind != "heading"]
+    sentences = [_without_trailing_emoji(s) for s in segment(text) if s.kind != "heading"]
     leveled = [(s, speech_level(s)) for s in sentences]
     leveled = [(s, lv) for s, lv in leveled if lv is not None]
     counts = Counter(lv for _, lv in leveled)
