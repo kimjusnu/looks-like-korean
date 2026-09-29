@@ -36,6 +36,9 @@ class TestRulePairs(unittest.TestCase):
         ("PAT-UI-PLEASE", "ui", "비밀번호를 입력해 주시기 바랍니다.", "비밀번호를 입력해 주세요."),
         ("PAT-UI-EXCLAIM", "ui", "저장했어요!", "저장했어요."),
         ("PAT-EMOJI", "ui", "업로드를 마쳤어요 🎉", "업로드를 마쳤어요."),
+        ("PAT-UI-GENERIC-ERROR", "ui", "알 수 없는 오류가 발생했습니다 😢", "파일이 너무 커요. 20MB 이하로 올려 주세요."),
+        ("PAT-UI-ROBOT", "ui", "입력값이 유효하지 않습니다.", "전화번호는 숫자만 입력해 주세요."),
+        ("PAT-UI-INTERJECTION", "ui", "앗! 연결이 끊겼어요.", "연결이 끊겼어요."),
     ]
 
     def test_pairs(self):
