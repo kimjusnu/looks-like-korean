@@ -1,16 +1,17 @@
 ---
 name: looks-like-korean
-description: Use when writing or revising Korean text that must not read as AI-written — 자기소개서(self-introductions), 제안서·보고서(proposals/reports), 공문·안내문(official notices), app/web UI copy(버튼·오류·빈 화면·확인 창 문구), and general prose such as blogs or emails. Also use when writing Korean UI strings in code. Triggers include "AI 어투", "AI 티", "사람이 쓴 것처럼", "자소서 다듬어", "문구 자연스럽게", "UX 라이팅". Picks the genre first, applies that genre's register and rules, then verifies with a deterministic checker (no LLM call) and a before/after fact diff.
+description: Use when writing or revising Korean text that must not read as AI-written — 자기소개서(self-introductions), 제안서·보고서(proposals/reports), 공문·안내문(official notices), app/web UI copy(버튼·오류·빈 화면·확인 창 문구), and general prose such as blogs or emails. Also use when writing Korean UI strings in code. Also use when answering in Korean chat to avoid AI habits such as opening with praise ("좋은 질문이에요", "핵심을 찔렀네요"), announcing points, hedged both-sides verdicts, bold/emoji/headings in a chat reply, and closing offers ("알려 주시면 더 맞춤형으로"). Triggers include "AI 어투", "AI 티", "AI 말투", "사람이 쓴 것처럼", "자소서 다듬어", "문구 자연스럽게", "UX 라이팅". Picks the genre first, applies that genre's register and rules, then verifies with a deterministic checker (no LLM call) and a before/after fact diff.
 ---
 
 # looks-like-korean
 
-AI가 쓴 티가 나지 않는 한국어를 쓰고 고친다. 핵심은 세 가지다.
+AI가 쓴 티가 나지 않는 한국어를 쓰고 고친다. 핵심은 네 가지다.
 
 1. **장르가 말투를 정한다.** 자기소개서, 제안서, 공문, 화면 문구는 맞는 말투와 규칙이 다르다.
    종결어미를 「다양하게」 바꾸면 더 사람 같아진다는 주장은 근거가 없고, 이 저장소의 첫 버전이 7쌍 모두에서 실패했다.
 2. **AI 글의 가장 큰 문제는 어투보다 내용이다.** 누구에게나 붙일 수 있는 문장, 장면과 수치가 없는 문장이 먼저 걸러진다.
 3. **윤문은 문체만 바꾼다.** 숫자, 고유명사, 인용한 말은 그대로 둔다. 없는 사실을 지어내지 않는다.
+4. **AI 말버릇을 처음부터 쓰지 않는다.** Claude·GPT 출력 90개에서 되풀이된 틀 37개를 아래 「쓰지 않는 말버릇」과 `references/ai-tone.md`에 모았다.
 
 근거는 저장소의 `docs/research/`(공개 자료 75곳 조사)와 `docs/research/measurements.md`(실제 원고 측정)에 있다.
 
@@ -27,6 +28,20 @@ pip install -e .
 
 Windows 콘솔에서 한글이 깨지면 `PYTHONIOENCODING=utf-8`을 붙인다.
 
+## 쓰지 않는 말버릇
+
+Claude·GPT 출력 90개에서 여러 주제에 걸쳐 되풀이됐고, 사람이 쓴 문서에는 거의 없던 것이다. 전체 37개는 `references/ai-tone.md`.
+
+- **칭찬·맞장구로 시작하지 않는다.** 「좋은 질문이에요」「흥미로운 관찰이에요」「핵심을 찌르셨네요」「맞아.」 대신 첫 문장에 판단을 쓴다.
+- **할 말을 예고하지 않는다.** 「몇 가지 짚어볼게요」「솔직하게 말씀드리면」 없이 첫 내용부터 쓴다.
+- **양쪽 다 맞다고 얼버무리지 않는다.** 「맞는 부분도 있고 아닌 부분도 있어요」 대신 어느 쪽인지 먼저 말하고 예외는 조건으로 적는다.
+- **결과물을 안내 문장으로 감싸지 않는다.** 첫 줄의 「아래는 ~입니다」, 끝의 「알려 주시면 더 맞춤형으로 다듬어 드릴게요」「💡 활용 팁」「약 680자」를 쓰지 않는다.
+- **되묻기로 끝내지 않는다.** 「혹시 어떤 맥락에서 ~?」 대신, 전제가 필요하면 답 앞에서 가정을 한 줄로 밝힌다.
+- **격을 세우는 틀을 쓰지 않는다.** 「단순한 A가 아니라 B」「중요한 것은 ~」「결론적으로」「작은 실천이 큰 변화를」「~의 밑거름·원동력」, 스스로 묻고 답하기(「왜일까요?」).
+- **뜻이 흐린 감성어를 쓰지 않는다.** 「진심으로」「따뜻한·소중한」「진정한」「함께 성장」.
+- **대화 답에 서식을 쓰지 않는다.** 굵은 글씨, 이모지, 소제목, 표, 구분선은 요청받았을 때만 쓴다. 요청은 하나인데 여러 버전을 내밀지 않는다.
+- **줄표(—)로 문장을 잇지 않는다.**
+
 ## 절차
 
 ### 1. 장르를 정한다
@@ -38,6 +53,7 @@ Windows 콘솔에서 한글이 깨지면 `PYTHONIOENCODING=utf-8`을 붙인다.
 | 공문·공지·대국민 안내문 | `notice` | `references/notice.md` |
 | 앱·웹 화면 문구 | `ui` | `references/ui.md` |
 | 블로그·수기·메일·설명문 | `general` | `references/general.md` |
+| 대화 답변(질문·의견에 답하기) | `chat` | 아래 「쓰지 않는 말버릇」 |
 
 요청에서 장르가 분명하지 않으면 한 번만 묻는다. **해당 규칙 문서를 읽기 전에는 쓰지 않는다.**
 
@@ -52,6 +68,7 @@ Windows 콘솔에서 한글이 깨지면 `PYTHONIOENCODING=utf-8`을 붙인다.
 ### 3. 쓰거나 고친다
 
 - 규칙 문서의 「쓰는 규칙」을 따른다.
+- 아래 「쓰지 않는 말버릇」을 쓰는 동안 지킨다. 검사기가 잡기 전에 피하는 편이 문장이 덜 어색하다.
 - 고칠 때는 **뜻 단위로 다시 쓴다.** 금지어를 동의어로 바꾸는 것으로 끝내지 않는다. AI 어휘는 모델 세대마다 바뀐다.
 - 사람이 쓴 초안이 있으면 그 초안에서 출발한다. 처음부터 새로 쓰는 것보다 AI 티가 덜 생긴다.
 - 문장 단위의 번역투·상투구를 더 깊이 다듬어야 하면, 설치돼 있는 경우 `humanize-korean` 스킬을 이어서 쓸 수 있다.
